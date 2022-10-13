@@ -66,7 +66,7 @@ export default defineConfig(({ mode }) => {
             preserveModulesRoot: "src",
             format: "cjs",
             inlineDynamicImports: true,
-            entryFileNames: getEntry("cjs"),
+            entryFileNames: getEntry("js"),
           },
         ],
       },

@@ -1,10 +1,10 @@
 {
-  "name": "vscode-monorepo-workspace",
-  "displayName": "Monorepo Workspace",
-  "description": "Manage monorepos with multi-root workspaces. Supports Lerna, Yarn, Pnpm, Rushjs and recursive package directories",
-  "version": "1.3.1",
+  "name": "vscode-mono-workspace",
+  "displayName": "Mono Workspace",
+  "description": "Manage monorepos with multi-root workspaces. Supports Cargo, NX, Lerna, Yarn, Pnpm, Rushjs and recursive package directories",
+  "version": "1.3.3",
   "publisher": "melMass",
-  "repository": "http://github.com/folke/vscode-monorepo-workspace",
+  "repository": "http://github.com/mtb-tools/vscode-mono-workspace",
   "license": "MIT",
   "engines": {
     "vscode": ">=1.53.0"
@@ -12,18 +12,19 @@
   "categories": [
     "Other"
   ],
-  "type": "module",
   "keywords": [
     "workspace",
     "monorepo",
     "project",
     "yarn",
-    "folder"
+    "folder",
+    "nx",
+    "cargo"
   ],
   "activationEvents": [
     "workspaceContains:**/package.json"
   ],
-  "main": "./out/extension.cjs",
+  "main": "./out/extension.js",
   "icon": "images/icon.png",
   "contributes": {
     "commands": [
@@ -49,7 +50,7 @@
       }
     ],
     "configuration": {
-      "title": "Monorepo Workspace",
+      "title": "Mono Workspace",
       "properties": {
         "monorepoWorkspace.includeRoot": {
           "type": "boolean",
@@ -111,6 +112,8 @@
     "lint": "eslint src --ext ts",
     "pretest": "npm run compile && npm run lint",
     "test": "node ./out/test/run-test.js",
+    "package": "vsce package",
+    "package:install": "vsce package && code --install-extension ./*vsix",
     "release": "vsce package && vsce publish"
   },
   "devDependencies": {
@@ -139,6 +142,7 @@
     "tslib": "2.1.0",
     "typescript": "4.2.2",
     "vite": "^3.1.8",
+    "vsce": "^2.11.0",
     "vscode-test": "1.6.1"
   },
   "dependencies": {

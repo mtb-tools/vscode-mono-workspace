@@ -1,6 +1,6 @@
 # Monorepo Workspace
 
-Manage monorepos with multi-root workspaces. Supports Lerna, Yarn, Pnpm, Rushjs and recursive package directories.
+Manage monorepos with multi-root workspaces. Supports Cargo, NX, Lerna, Yarn, Pnpm, Rushjs and recursive package directories.
 
 ## Features
 
@@ -42,6 +42,12 @@ You can also configure custom types with a prefix in your JSON settings:
 You can find all options under "Monorepo Workspace" in your configurtion.
 
 ## Release Notes
+
+### 1.3.3
+
+Forked here by Mel.
+Added support for NX & Cargo.
+Updated dependencies
 
 ### 1.2.0
 

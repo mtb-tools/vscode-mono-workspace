@@ -1,5 +1,11 @@
 # Release Notes
 
+## 1.3.3
+
+- Forked here by Mel.
+- Added support for NX & Cargo.
+- Updated dependencies
+
 ## 1.3.0
 
 - Use rollup for smaller (and faster) builds
