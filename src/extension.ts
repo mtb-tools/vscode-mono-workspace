@@ -15,7 +15,11 @@ import {
   workspace as vscodeWorkspace,
   ThemeIcon,
 } from "vscode"
-import { getProjects, workspaceRoot, ProjectConfiguration } from "@nrwl/devkit"
+import {
+  getProjects,
+  ProjectConfiguration,
+  readWorkspaceConfiguration,
+} from "@nrwl/devkit"
 import { FsTree } from "nx/src/generators/tree"
 import { uniqBy, sortBy } from "lodash"
 import { readFile, stat } from "fs/promises"
@@ -24,7 +28,6 @@ interface WorkspaceFolderItem extends QuickPickItem {
   emoji?: string
   isRoot?: boolean
   description?: string
-  relativeRoot?: string
 }
 
 const output_channel: OutputChannel = window.createOutputChannel(
@@ -32,15 +35,15 @@ const output_channel: OutputChannel = window.createOutputChannel(
 )
 
 function getFolderEmoji(root: string, pkgRoot: string) {
-  const configg = vscodeWorkspace.getConfiguration()
-  const icon_theme = configg.workbench.iconTheme
+  // const configg = vscodeWorkspace.getConfiguration()
+  // const icon_theme = configg.workbench.iconTheme
 
-  output_channel.appendLine(
-    JSON.stringify(
-      extensions.getExtension("Equinusocio.vsc-community-material-theme")
-    )
-  )
-  const t = ThemeIcon.File
+  // output_channel.appendLine(
+  //   JSON.stringify(
+  //     extensions.getExtension("Equinusocio.vsc-community-material-theme")
+  //   )
+  // )
+  // const t = ThemeIcon.File
   //
   const config = vscodeWorkspace.getConfiguration("monorepoWorkspace.folders")
   if (root == pkgRoot) return config.get<string>("prefix.root") || ""
@@ -71,12 +74,13 @@ type GetProjectOptions = Partial<{
 
 async function getFullWorkspace(options: GetProjectOptions) {}
 
-async function getCargoProjects(options: GetProjectOptions) {
+async function getCargoProjects(
+  options: GetProjectOptions
+): Promise<{ name: string; root: string }[]> {
   const cargo_root = path.join(options.cwd, "Cargo.toml")
   const cargo_worspace_file = await stat(cargo_root)
   const found_root = cargo_worspace_file.isFile()
   if (found_root) {
-    output_channel.appendLine("WE FOUND A CARGO ROOT WORKSPACE")
     const cargo_content = (await readFile(cargo_root)).toString()
     const content: { workspace: { members: string[] } } = parse(cargo_content)
 
@@ -87,12 +91,12 @@ async function getCargoProjects(options: GetProjectOptions) {
         const m_stat = await stat(m_cargo)
         if (m_stat.isFile()) {
           const m_content = parse((await readFile(m_cargo)).toString())
-          output_channel.appendLine(
-            `Adding from cargo: ${JSON.stringify(m_content)}`
-          )
+          // output_channel.appendLine(
+          //   `Adding from cargo: ${JSON.stringify(m_content)}`
+          // )
           return {
             name: m_content.package.name,
-            root: path.dirname(m_cargo),
+            root: path.join(options.cwd, m_root),
           }
         }
       })
@@ -106,18 +110,19 @@ async function getNxProjects(
 ): Promise<{ root: string; projects: { root: string; name: string }[] }> {
   const nx_tree = new FsTree(options.cwd, false)
   const nx_proj: Map<string, ProjectConfiguration> = getProjects(nx_tree)
+  const nx_conf = readWorkspaceConfiguration(nx_tree)
 
   const nx_ws: { name: string; root: string }[] = []
 
   for (const project of nx_proj.entries()) {
     nx_ws.push({
       name: project[0],
-      root: project[1].root,
+      root: path.join(options.cwd, project[1].root),
     })
   }
   return {
     projects: nx_ws,
-    root: workspaceRoot,
+    root: options.cwd,
   }
 }
 
@@ -147,7 +152,6 @@ async function getPackageFolders(
             workspace.type[0].toUpperCase() + workspace.type.slice(1)
           } Workspace Root`,
           root: Uri.file(workspace.root),
-          relativeRoot: "/",
           isRoot: true,
         })
       ret.push(
@@ -160,11 +164,9 @@ async function getPackageFolders(
               emoji: `${getFolderEmoji(workspace.root, p.root)}`,
               description: `at ${path.relative(workspace.root, p.root)}`,
               root: Uri.file(p.root),
-              relativeRoot: path.relative(workspace.root, p.root),
               isRoot: false,
             }
           })
-          .sort((a, b) => a.root.fsPath.localeCompare(b.root.fsPath))
       )
     }
     if (nx) {
@@ -175,7 +177,6 @@ async function getPackageFolders(
             emoji: `${getFolderEmoji(nx.root, p.root)}`,
             description: `at ${path.relative(nx.root, p.root)}`,
             root: Uri.file(p.root),
-            relativeRoot: path.relative(nx.root, p.root),
             isRoot: false,
           }
         })
@@ -189,18 +190,16 @@ async function getPackageFolders(
             emoji: `${getFolderEmoji(cwd, p.root)}`,
             description: `at ${path.relative(cwd, p.root)}`,
             root: Uri.file(p.root),
-            relativeRoot: path.relative(cwd, p.root),
             isRoot: false,
           }
         })
       )
     }
-    const out: WorkspaceFolderItem[] = sortBy(
-      uniqBy(ret, "relativeRoot"),
-      "relativeRoot"
+    const out: WorkspaceFolderItem[] = uniqBy(ret, "root.fsPath").sort((a, b) =>
+      a.root.fsPath.localeCompare(b.root.fsPath)
     )
 
-    output_channel.appendLine(`Found projects: ${JSON.stringify(out)}`)
+    // output_channel.appendLine(`Found projects: ${JSON.stringify(out)}`)
 
     return out
   }
@@ -236,7 +235,7 @@ async function updateAll(items?: WorkspaceFolderItem[], clean = false) {
   const config = vscodeWorkspace.getConfiguration("monorepoWorkspace")
   if (!items) items = await getPackageFolders(config.get("includeRoot"))
   if (!items) return
-  const itemsSet = new Set(items.map((item) => item.root.fsPath))
+  const itemsSet = new Set(items.map((item) => item.root.fsPath || item.root))
   const folders = vscodeWorkspace.workspaceFolders
   const adds: { name: string; uri: Uri }[] = []
   if (folders && !clean) {
@@ -254,6 +253,10 @@ async function updateAll(items?: WorkspaceFolderItem[], clean = false) {
 async function select(items?: WorkspaceFolderItem[]) {
   if (!items) items = await getPackageFolders()
   if (!items) return
+
+  output_channel.appendLine(
+    `${JSON.stringify(items.map((p) => p.root.fsPath))}`
+  )
   const itemsSet = new Map(items.map((item) => [item.root.fsPath, item]))
   const folders = vscodeWorkspace.workspaceFolders
 
@@ -263,7 +266,6 @@ async function select(items?: WorkspaceFolderItem[]) {
         itemsSet.get(folder.uri.fsPath)!.picked = true
       } else {
         items.push({
-          relativeRoot: folder.uri.toString(),
           root: folder.uri,
           isRoot: false,
           label: folder.name,
@@ -275,7 +277,7 @@ async function select(items?: WorkspaceFolderItem[]) {
   }
   items = items.map((it) => {
     if (it.emoji) {
-      it.label = `${it.emoji} $(File) ${it.label}`
+      it.label = `${it.emoji} ${it.label}`
     }
     return it
   })
