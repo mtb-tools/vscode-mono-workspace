@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 // eslint-disable-next-line unicorn/import-style
-import path from "path"
+import path from "node:path"
 import { parse } from "toml"
 import { getWorkspace, WorkspaceProviderType } from "ultra-runner"
 import {
@@ -22,7 +22,7 @@ import {
 } from "@nrwl/devkit"
 import { FsTree } from "nx/src/generators/tree"
 import { uniqBy, sortBy } from "lodash"
-import { readFile, stat } from "fs/promises"
+import { readFile, stat } from "node:fs/promises"
 interface WorkspaceFolderItem extends QuickPickItem {
   root: Uri
   emoji?: string
@@ -72,7 +72,7 @@ type GetProjectOptions = Partial<{
   includeRoot: boolean
 }>
 
-async function getFullWorkspace(options: GetProjectOptions) {}
+// async function getFullWorkspace(options: GetProjectOptions) {}
 
 async function getCargoProjects(
   options: GetProjectOptions
@@ -81,8 +81,10 @@ async function getCargoProjects(
   const cargo_worspace_file = await stat(cargo_root)
   const found_root = cargo_worspace_file.isFile()
   if (found_root) {
-    const cargo_content = (await readFile(cargo_root)).toString()
-    const content: { workspace: { members: string[] } } = parse(cargo_content)
+    const cargo_content = await readFile(cargo_root)
+    const content: { workspace: { members: string[] } } = parse(
+      cargo_content.toString()
+    )
 
     const projects = await Promise.all(
       content.workspace.members.map(async (member) => {
@@ -90,12 +92,13 @@ async function getCargoProjects(
         const m_cargo = path.join(options.cwd, m_root, "Cargo.toml")
         const m_stat = await stat(m_cargo)
         if (m_stat.isFile()) {
-          const m_content = parse((await readFile(m_cargo)).toString())
+          const m_content_raw = await readFile(m_cargo)
+          const m_content = parse(m_content_raw.toString())
           // output_channel.appendLine(
           //   `Adding from cargo: ${JSON.stringify(m_content)}`
           // )
           return {
-            name: m_content.package.name,
+            name: m_content.package?.name,
             root: path.join(options.cwd, m_root),
           }
         }
@@ -105,12 +108,11 @@ async function getCargoProjects(
   }
 }
 
-async function getNxProjects(
+function getNxProjects(
   options: GetProjectOptions
-): Promise<{ root: string; projects: { root: string; name: string }[] }> {
+): { root: string; projects: { root: string; name: string }[] } {
   const nx_tree = new FsTree(options.cwd, false)
   const nx_proj: Map<string, ProjectConfiguration> = getProjects(nx_tree)
-  const nx_conf = readWorkspaceConfiguration(nx_tree)
 
   const nx_ws: { name: string; root: string }[] = []
 
@@ -140,7 +142,7 @@ async function getPackageFolders(
       includeRoot: true,
     }
     const workspace = await getMultiProjects(options)
-    const nx = await getNxProjects(options)
+    const nx = getNxProjects(options)
     const cargo = await getCargoProjects(options)
     const ret: WorkspaceFolderItem[] = []
     if (workspace) {
@@ -298,13 +300,16 @@ async function openPackage(action: PackageAction) {
     })
     if (item) {
       switch (action) {
-        case PackageAction.currentWindow:
+        case PackageAction.currentWindow: {
           return commands.executeCommand("vscode.openFolder", item.root)
-        case PackageAction.newWindow:
+        }
+        case PackageAction.newWindow: {
           return commands.executeCommand("vscode.openFolder", item.root, true)
-        case PackageAction.workspaceFolder:
+        }
+        case PackageAction.workspaceFolder: {
           addWorkspaceFolder(item)
           break
+        }
       }
     }
   }
@@ -328,4 +333,4 @@ export function activate(context: ExtensionContext) {
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {}
+// export function deactivate() {}

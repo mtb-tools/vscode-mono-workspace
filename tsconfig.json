@@ -1,14 +1,14 @@
 {
   "compilerOptions": {
-    "module": "es2015",
-    "target": "es6",
-    // "outDir": "out",
+    "module": "ESNext",
+    "target": "ES2020",
+    "outDir": "out",
     "lib": [
-      "es6"
+      "ES2020"
     ],
     "sourceMap": true,
     "moduleResolution": "node",
-    "rootDir": "src",
+    //"rootDir": "src",
     "allowSyntheticDefaultImports": true,
     "importHelpers": true,
     "esModuleInterop": true,
@@ -20,7 +20,8 @@
     // "noUnusedParameters": true,  /* Report errors on unused parameters. */
   },
   "include": [
-    "src/**/**.ts"
+    "src/**/**.ts",
+    "vite.config.ts"
   ],
   "exclude": [
     "node_modules",
