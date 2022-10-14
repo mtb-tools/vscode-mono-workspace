@@ -7,7 +7,7 @@
   "repository": "http://github.com/mtb-tools/vscode-mono-workspace",
   "license": "MIT",
   "engines": {
-    "vscode": ">=1.53.0"
+    "vscode": ">=1.63.0"
   },
   "categories": [
     "Other"
@@ -52,77 +52,77 @@
     "configuration": {
       "title": "Mono Workspace",
       "properties": {
-        "monorepoWorkspace.includeRoot": {
+        "monoWorkspace.includeRoot": {
           "type": "boolean",
           "default": true,
           "description": "Inlcude the top-level monorepo root path as a workspace folder"
         },
-        "monorepoWorkspace.providers_suffix": {
+        "monoWorkspace.providers_suffix": {
           "type": "boolean",
           "default": true,
           "description": "Append the provider source to project names."
         },
-        "monorepoWorkspace.fetch_descriptions": {
+        "monoWorkspace.fetch_descriptions": {
           "type": "boolean",
           "default": true,
           "description": "Tries to get the descriptions from packages."
         },
-        "monorepoWorkspace.providers.cargo": {
+        "monoWorkspace.providers.cargo": {
           "type": "boolean",
           "default": true,
           "description": "Resolve projects from Cargo workspace members."
         },
-        "monorepoWorkspace.providers.core": {
+        "monoWorkspace.providers.core": {
           "type": "boolean",
           "default": true,
           "description": "Resolve projects from Lerna, Yarn, Pnpm, Rushjs, and recursive package discovery."
         },
-        "monorepoWorkspace.providers.nx": {
+        "monoWorkspace.providers.nx": {
           "type": "boolean",
           "default": true,
           "description": "Resolve projects from NX Workspace"
         },
-        "monorepoWorkspace.folders.regex.apps": {
+        "monoWorkspace.folders.regex.apps": {
           "type": "string",
           "default": "^app|web|api|frontend|backend",
           "description": "Regex to match app-like package paths"
         },
-        "monorepoWorkspace.folders.prefix.apps": {
+        "monoWorkspace.folders.prefix.apps": {
           "type": "string",
           "default": "🚀 ",
           "description": "Folder prefix for apps"
         },
-        "monorepoWorkspace.folders.regex.libs": {
+        "monoWorkspace.folders.regex.libs": {
           "type": "string",
           "default": "^common|package|lib|private",
           "description": "Regex to match library-like package paths"
         },
-        "monorepoWorkspace.folders.prefix.libs": {
+        "monoWorkspace.folders.prefix.libs": {
           "type": "string",
           "default": "📦 ",
           "description": "Folder prefix for libraries"
         },
-        "monorepoWorkspace.folders.regex.tools": {
+        "monoWorkspace.folders.regex.tools": {
           "type": "string",
           "default": "^tool|script|util",
           "description": "Regex to match tool-like package paths"
         },
-        "monorepoWorkspace.folders.prefix.tools": {
+        "monoWorkspace.folders.prefix.tools": {
           "type": "string",
           "default": "⚙️ ",
           "description": "Folder prefix for tools"
         },
-        "monorepoWorkspace.folders.prefix.unknown": {
+        "monoWorkspace.folders.prefix.unknown": {
           "type": "string",
           "default": "",
           "description": "Folder prefix for unknown packages"
         },
-        "monorepoWorkspace.folders.prefix.root": {
+        "monoWorkspace.folders.prefix.root": {
           "type": "string",
           "default": "✨ ",
           "description": "Folder prefix for the root folder"
         },
-        "monorepoWorkspace.folders.custom": {
+        "monoWorkspace.folders.custom": {
           "type": "array",
           "default": [],
           "description": "An array of custom 'regex/prefix' pairs like: [{regex:'foo', prefix:'bar'}, {regex:'fffoo', prefix:'bbbar'}]"
@@ -139,7 +139,7 @@
     "test": "node ./out/test/run-test.js",
     "package": "vsce package",
     "package:install": "vsce package && code --install-extension ./*vsix",
-    "release": "vsce package && vsce publish"
+    "release": "vsce package --pre-release && vsce publish --pre-release"
   },
   "devDependencies": {
     "@nrwl/devkit": "14.8.4",

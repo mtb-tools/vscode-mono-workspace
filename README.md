@@ -1,4 +1,4 @@
-# Monorepo Workspace
+# Mono Workspace (FORKED FROM MONOREPO WORKSPACE BY FLOKE)
 
 Manage monorepos with multi-root workspaces. Supports Cargo, NX, Lerna, Yarn, Pnpm, Rushjs and recursive package directories.
 
@@ -32,7 +32,7 @@ You can also configure custom types with a prefix in your JSON settings:
 
 ```json
 {
-  "monorepoWorkspace.folders.custom": [
+  "monoWorkspace.folders.custom": [
     {"regex":"app1", "prefix": "🔥"},
     {"regex":"app2", "prefix": "📚"}
   ]

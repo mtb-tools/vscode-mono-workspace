@@ -90,7 +90,7 @@ function getFolderEmoji(root: string, pkgRoot: string) {
   // )
   // const t = ThemeIcon.File
   //
-  // const config = vscodeWorkspace.getConfiguration("monorepoWorkspace.folders")
+
   if (root == pkgRoot) return getSetting<string>("folders.prefix.root") || ""
   //config.get<string>("prefix.root") || ""
   const dir = path.relative(root, pkgRoot)
@@ -285,8 +285,8 @@ function addWorkspaceFolder(item: WorkspaceFolderItem) {
 }
 
 async function updateAll(items?: WorkspaceFolderItem[], clean = false) {
-  const config = vscodeWorkspace.getConfiguration("monorepoWorkspace")
-  if (!items) items = await getPackageFolders(config.get("includeRoot"))
+  if (!items)
+    items = await getPackageFolders(getSetting<boolean>("includeRoot"))
   if (!items) return
   const itemsSet = new Set(items.map((item) => item.root.fsPath || item.root))
   const folders = vscodeWorkspace.workspaceFolders

@@ -33,6 +33,6 @@ interface FolderOptions {
 }
 
 export function getSetting<T>(key: string): T {
-  const config = vscodeWorkspace.getConfiguration("monorepoWorkspace")
+  const config = vscodeWorkspace.getConfiguration("monoWorkspace")
   return config.get<T>(key)
 }
