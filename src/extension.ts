@@ -1,66 +1,22 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-// eslint-disable-next-line unicorn/import-style
 import path from "node:path"
 import { parse } from "toml"
-import { getWorkspace, WorkspaceProviderType } from "ultra-runner"
+import { getWorkspace } from "ultra-runner"
 import {
   commands,
   ExtensionContext,
-  QuickPickItem,
   Uri,
   window,
-  extensions,
   OutputChannel,
   workspace as vscodeWorkspace,
-  ThemeIcon,
 } from "vscode"
-import {
-  getProjects,
-  ProjectConfiguration,
-  readWorkspaceConfiguration,
-} from "@nrwl/devkit"
+
+import { GetProjectOptions, PackageAction, WorkspaceFolderItem } from "./types"
+import { getProjects, ProjectConfiguration } from "@nrwl/devkit"
 import { FsTree } from "nx/src/generators/tree"
-import { uniqBy, sortBy } from "lodash"
+import { uniqBy } from "lodash"
 import { readFile, stat, access } from "node:fs/promises"
 import { constants as fsconstants, PathLike } from "node:fs"
-interface WorkspaceFolderItem extends QuickPickItem {
-  root: Uri
-  emoji?: string
-  isRoot?: boolean
-  description?: string
-}
-
-interface ProviderOptions {
-  core: boolean
-  cargo: boolean
-  nx: boolean
-}
-interface ExtensionOptions {
-  includeRoot: boolean
-  providers_suffix: boolean
-  providers: ProviderOptions
-  folders: FolderOptions
-}
-
-// Emoji used per type
-interface PrefixOptions {
-  apps: string
-  libs: string
-  tools: string
-  root: string
-  unknown: string
-}
-interface RegexOptions {
-  apps: string
-  libs: string
-  tools: string
-}
-interface FolderOptions {
-  prefix: PrefixOptions
-  regex: RegexOptions
-  custom?: string[]
-}
+import { getSetting } from "./settings"
 
 const providers_suffix = (provider: string) => {
   const enabled = getSetting<boolean>("providers_suffix")
@@ -78,11 +34,6 @@ async function checkFileExists(file: PathLike) {
   } catch {
     return false
   }
-}
-
-function getSetting<T>(key: string): T {
-  const config = vscodeWorkspace.getConfiguration("monorepoWorkspace")
-  return config.get<T>(key)
 }
 
 function getFolderEmoji(root: string, pkgRoot: string) {
@@ -120,12 +71,6 @@ function getFolderEmoji(root: string, pkgRoot: string) {
   return getSetting<string>("folders.prefix.unknown") || ""
 }
 
-type GetProjectOptions = Partial<{
-  cwd: string
-  type: WorkspaceProviderType | undefined
-  includeRoot: boolean
-}>
-
 // async function getFullWorkspace(options: GetProjectOptions) {}
 
 async function getCargoProjects(
@@ -137,7 +82,7 @@ async function getCargoProjects(
     const cargo_content = await readFile(cargo_root)
     const content: { workspace: { members: string[] } } = parse(
       cargo_content.toString()
-    )
+    ) as { workspace: { members: string[] } }
 
     return await Promise.all(
       content.workspace.members.map(async (member) => {
@@ -148,7 +93,7 @@ async function getCargoProjects(
           const m_content_raw = await readFile(m_cargo)
           const m_content: { package: { name: string } } = parse(
             m_content_raw.toString()
-          )
+          ) as { package: { name: string } }
 
           return {
             name: m_content.package.name,
@@ -267,12 +212,6 @@ async function getPackageFolders(
   }
 }
 
-enum PackageAction {
-  newWindow,
-  currentWindow,
-  workspaceFolder,
-}
-
 function addWorkspaceFolder(item: WorkspaceFolderItem) {
   const folders = vscodeWorkspace.workspaceFolders
   let start = 0
@@ -325,7 +264,8 @@ async function select(items?: WorkspaceFolderItem[]) {
   if (folders) {
     for (const folder of folders) {
       if (itemsSet.has(folder.uri.fsPath)) {
-        itemsSet.get(folder.uri.fsPath)!.picked = true
+        const currentItem = itemsSet.get(folder.uri.fsPath)
+        if (currentItem) currentItem.picked = true
       } else {
         items.push({
           root: folder.uri,
