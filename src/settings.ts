@@ -8,6 +8,7 @@ interface ProviderOptions {
 interface ExtensionOptions {
   includeRoot: boolean
   providers_suffix: boolean
+  fetch_descriptions: boolean
   providers: ProviderOptions
   folders: FolderOptions
 }

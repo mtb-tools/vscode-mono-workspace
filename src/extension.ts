@@ -1,5 +1,5 @@
 import path from "node:path"
-import { parse } from "toml"
+import { parse as parseToml } from "toml"
 import { getWorkspace } from "ultra-runner"
 import {
   commands,
@@ -13,7 +13,7 @@ import {
 import { GetProjectOptions, PackageAction, WorkspaceFolderItem } from "./types"
 import { getProjects, ProjectConfiguration } from "@nrwl/devkit"
 import { FsTree } from "nx/src/generators/tree"
-import { uniqBy } from "lodash"
+import { uniqBy, get as loGet } from "lodash"
 import { readFile, stat, access } from "node:fs/promises"
 import { constants as fsconstants, PathLike } from "node:fs"
 import { getSetting } from "./settings"
@@ -34,6 +34,49 @@ async function checkFileExists(file: PathLike) {
   } catch {
     return false
   }
+}
+
+const package_description: Record<
+  string,
+  { access: string; convert: (src: string) => unknown }
+> = {
+  "Cargo.toml": {
+    access: "package.description",
+    convert: parseToml,
+  },
+  "package.json": {
+    access: "description",
+    convert: JSON.parse,
+  },
+}
+
+function getFolderDescription(root: string, project_root: string): string {
+  return `at ${path.relative(root, project_root)}`
+}
+
+async function getFolderDetails(project_root: string): Promise<string> {
+  const complex = getSetting<boolean>("fetch_descriptions")
+  if (complex) {
+    for (const pkg_type in package_description) {
+      const pkg = path.join(project_root, pkg_type)
+      if (await checkFileExists(pkg)) {
+        const cont = await readFile(pkg)
+        const cont_parsed = package_description[pkg_type].convert(
+          cont.toString()
+        )
+        const cont_description = loGet(
+          cont_parsed,
+          package_description[pkg_type].access
+        ) as string
+
+        if (cont_description) {
+          return cont_description
+        }
+      }
+    }
+  }
+
+  return undefined
 }
 
 function getFolderEmoji(root: string, pkgRoot: string) {
@@ -80,7 +123,7 @@ async function getCargoProjects(
 
   if (await checkFileExists(cargo_root)) {
     const cargo_content = await readFile(cargo_root)
-    const content: { workspace: { members: string[] } } = parse(
+    const content: { workspace: { members: string[] } } = parseToml(
       cargo_content.toString()
     ) as { workspace: { members: string[] } }
 
@@ -91,7 +134,7 @@ async function getCargoProjects(
         const m_stat = await stat(m_cargo)
         if (m_stat.isFile()) {
           const m_content_raw = await readFile(m_cargo)
-          const m_content: { package: { name: string } } = parse(
+          const m_content: { package: { name: string } } = parseToml(
             m_content_raw.toString()
           ) as { package: { name: string } }
 
@@ -155,33 +198,39 @@ async function getPackageFolders(
             isRoot: true,
           })
         ret.push(
-          ...workspace
-            .getPackages()
-            .filter((p) => p.root !== workspace.root)
-            .map((p) => {
-              return {
-                label: `${p.name} ${providers_suffix("core")}`,
-                emoji: `${getFolderEmoji(workspace.root, p.root)}`,
-                description: `at ${path.relative(workspace.root, p.root)}`,
-                root: Uri.file(p.root),
-                isRoot: false,
-              }
-            })
+          ...(await Promise.all(
+            workspace
+              .getPackages()
+              .filter((p) => p.root !== workspace.root)
+              .map(async (p) => {
+                return {
+                  label: `${p.name} ${providers_suffix("core")}`,
+                  emoji: `${getFolderEmoji(workspace.root, p.root)}`,
+                  description: getFolderDescription(workspace.root, p.root),
+                  detail: await getFolderDetails(p.root),
+                  root: Uri.file(p.root),
+                  isRoot: false,
+                }
+              })
+          ))
         )
       }
     }
     const nx_provider = getSetting<boolean>("providers.nx")
     if (nx_provider && nx) {
       ret.push(
-        ...nx.projects.map((p) => {
-          return {
-            label: `${p.name} ${providers_suffix("nx")}`,
-            emoji: `${getFolderEmoji(nx.root, p.root)}`,
-            description: `at ${path.relative(nx.root, p.root)}`,
-            root: Uri.file(p.root),
-            isRoot: false,
-          }
-        })
+        ...(await Promise.all(
+          nx.projects.map(async (p) => {
+            return {
+              label: `${p.name} ${providers_suffix("nx")}`,
+              emoji: `${getFolderEmoji(nx.root, p.root)}`,
+              description: getFolderDescription(nx.root, p.root),
+              detail: await getFolderDetails(p.root),
+              root: Uri.file(p.root),
+              isRoot: false,
+            }
+          })
+        ))
       )
     }
     const cargo_provider = getSetting<boolean>("providers.cargo")
@@ -190,15 +239,18 @@ async function getPackageFolders(
 
       if (cargo) {
         ret.push(
-          ...cargo.map((p) => {
-            return {
-              label: `${p.name} ${providers_suffix("cargo")}`,
-              emoji: `${getFolderEmoji(cwd, p.root)}`,
-              description: `at ${path.relative(cwd, p.root)}`,
-              root: Uri.file(p.root),
-              isRoot: false,
-            }
-          })
+          ...(await Promise.all(
+            cargo.map(async (p) => {
+              return {
+                label: `${p.name} ${providers_suffix("cargo")}`,
+                emoji: `${getFolderEmoji(cwd, p.root)}`,
+                description: getFolderDescription(cwd, p.root),
+                detail: await getFolderDetails(p.root),
+                root: Uri.file(p.root),
+                isRoot: false,
+              }
+            })
+          ))
         )
       }
     }
