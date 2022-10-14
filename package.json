@@ -57,6 +57,26 @@
           "default": true,
           "description": "Inlcude the top-level monorepo root path as a workspace folder"
         },
+        "monorepoWorkspace.providers_suffix": {
+          "type": "boolean",
+          "default": true,
+          "description": "Append the provider source to project names."
+        },
+        "monorepoWorkspace.providers.cargo": {
+          "type": "boolean",
+          "default": true,
+          "description": "Resolve projects from Cargo workspace members."
+        },
+        "monorepoWorkspace.providers.core": {
+          "type": "boolean",
+          "default": true,
+          "description": "Resolve projects from Lerna, Yarn, Pnpm, Rushjs, and recursive package discovery."
+        },
+        "monorepoWorkspace.providers.nx": {
+          "type": "boolean",
+          "default": true,
+          "description": "Resolve projects from NX Workspace"
+        },
         "monorepoWorkspace.folders.regex.apps": {
           "type": "string",
           "default": "^app|web|api|frontend|backend",

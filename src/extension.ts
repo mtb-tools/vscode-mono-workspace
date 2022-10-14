@@ -22,7 +22,8 @@ import {
 } from "@nrwl/devkit"
 import { FsTree } from "nx/src/generators/tree"
 import { uniqBy, sortBy } from "lodash"
-import { readFile, stat } from "node:fs/promises"
+import { readFile, stat, access } from "node:fs/promises"
+import { constants as fsconstants, PathLike } from "node:fs"
 interface WorkspaceFolderItem extends QuickPickItem {
   root: Uri
   emoji?: string
@@ -30,9 +31,59 @@ interface WorkspaceFolderItem extends QuickPickItem {
   description?: string
 }
 
+interface ProviderOptions {
+  core: boolean
+  cargo: boolean
+  nx: boolean
+}
+interface ExtensionOptions {
+  includeRoot: boolean
+  providers_suffix: boolean
+  providers: ProviderOptions
+  folders: FolderOptions
+}
+
+// Emoji used per type
+interface PrefixOptions {
+  apps: string
+  libs: string
+  tools: string
+  root: string
+  unknown: string
+}
+interface RegexOptions {
+  apps: string
+  libs: string
+  tools: string
+}
+interface FolderOptions {
+  prefix: PrefixOptions
+  regex: RegexOptions
+  custom?: string[]
+}
+
+const providers_suffix = (provider: string) => {
+  const enabled = getSetting<boolean>("providers_suffix")
+  return enabled ? `(${provider.toUpperCase()})` : ""
+}
+
 const output_channel: OutputChannel = window.createOutputChannel(
   "monorepo-workspace"
 )
+
+async function checkFileExists(file: PathLike) {
+  try {
+    await access(file, fsconstants.F_OK)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function getSetting<T>(key: string): T {
+  const config = vscodeWorkspace.getConfiguration("monorepoWorkspace")
+  return config.get<T>(key)
+}
 
 function getFolderEmoji(root: string, pkgRoot: string) {
   // const configg = vscodeWorkspace.getConfiguration()
@@ -45,12 +96,15 @@ function getFolderEmoji(root: string, pkgRoot: string) {
   // )
   // const t = ThemeIcon.File
   //
-  const config = vscodeWorkspace.getConfiguration("monorepoWorkspace.folders")
-  if (root == pkgRoot) return config.get<string>("prefix.root") || ""
+  // const config = vscodeWorkspace.getConfiguration("monorepoWorkspace.folders")
+  if (root == pkgRoot) return getSetting<string>("folders.prefix.root") || ""
+  //config.get<string>("prefix.root") || ""
   const dir = path.relative(root, pkgRoot)
 
   // Use custom prefixes first
-  const custom = config.get<{ regex: string; prefix: string }[]>("custom")
+  const custom = getSetting<{ regex: string; prefix: string }[]>(
+    "folders.custom"
+  )
   if (custom?.length) {
     for (const c of custom) {
       if (c.prefix && c.regex && new RegExp(c.regex, "u").test(dir))
@@ -59,11 +113,11 @@ function getFolderEmoji(root: string, pkgRoot: string) {
   }
 
   for (const type of ["apps", "libs", "tools"]) {
-    const regex = config.get<string>(`regex.${type}`)
-    const prefix = config.get<string>(`prefix.${type}`)
+    const regex = getSetting<string>(`folders.regex.${type}`)
+    const prefix = getSetting<string>(`folders.prefix.${type}`)
     if (regex && prefix && new RegExp(regex, "u").test(dir)) return prefix
   }
-  return config.get<string>("prefix.unknown") || ""
+  return getSetting<string>("folders.prefix.unknown") || ""
 }
 
 type GetProjectOptions = Partial<{
@@ -78,33 +132,31 @@ async function getCargoProjects(
   options: GetProjectOptions
 ): Promise<{ name: string; root: string }[]> {
   const cargo_root = path.join(options.cwd, "Cargo.toml")
-  const cargo_worspace_file = await stat(cargo_root)
-  const found_root = cargo_worspace_file.isFile()
-  if (found_root) {
+
+  if (await checkFileExists(cargo_root)) {
     const cargo_content = await readFile(cargo_root)
     const content: { workspace: { members: string[] } } = parse(
       cargo_content.toString()
     )
 
-    const projects = await Promise.all(
+    return await Promise.all(
       content.workspace.members.map(async (member) => {
         const m_root = member
         const m_cargo = path.join(options.cwd, m_root, "Cargo.toml")
         const m_stat = await stat(m_cargo)
         if (m_stat.isFile()) {
           const m_content_raw = await readFile(m_cargo)
-          const m_content = parse(m_content_raw.toString())
-          // output_channel.appendLine(
-          //   `Adding from cargo: ${JSON.stringify(m_content)}`
-          // )
+          const m_content: { package: { name: string } } = parse(
+            m_content_raw.toString()
+          )
+
           return {
-            name: m_content.package?.name,
+            name: m_content.package.name,
             root: path.join(options.cwd, m_root),
           }
         }
       })
     )
-    return projects
   }
 }
 
@@ -141,41 +193,44 @@ async function getPackageFolders(
       cwd,
       includeRoot: true,
     }
-    const workspace = await getMultiProjects(options)
-    const nx = getNxProjects(options)
-    const cargo = await getCargoProjects(options)
     const ret: WorkspaceFolderItem[] = []
-    if (workspace) {
-      if (includeRoot)
-        ret.push({
-          label: `${workspace.getPackageForRoot(workspace.root) || "root"}`,
-          emoji: `${getFolderEmoji(workspace.root, workspace.root)}`,
-          description: `${
-            workspace.type[0].toUpperCase() + workspace.type.slice(1)
-          } Workspace Root`,
-          root: Uri.file(workspace.root),
-          isRoot: true,
-        })
-      ret.push(
-        ...workspace
-          .getPackages()
-          .filter((p) => p.root !== workspace.root)
-          .map((p) => {
-            return {
-              label: `${p.name} (npm workspace)`,
-              emoji: `${getFolderEmoji(workspace.root, p.root)}`,
-              description: `at ${path.relative(workspace.root, p.root)}`,
-              root: Uri.file(p.root),
-              isRoot: false,
-            }
+    const nx = getNxProjects(options)
+    const core_provider = getSetting<boolean>("providers.core")
+    if (core_provider) {
+      const workspace = await getMultiProjects(options)
+      if (workspace) {
+        if (includeRoot)
+          ret.push({
+            label: `${workspace.getPackageForRoot(workspace.root) || "root"}`,
+            emoji: `${getFolderEmoji(workspace.root, workspace.root)}`,
+            description: `${
+              workspace.type[0].toUpperCase() + workspace.type.slice(1)
+            } Workspace Root`,
+            root: Uri.file(workspace.root),
+            isRoot: true,
           })
-      )
+        ret.push(
+          ...workspace
+            .getPackages()
+            .filter((p) => p.root !== workspace.root)
+            .map((p) => {
+              return {
+                label: `${p.name} ${providers_suffix("core")}`,
+                emoji: `${getFolderEmoji(workspace.root, p.root)}`,
+                description: `at ${path.relative(workspace.root, p.root)}`,
+                root: Uri.file(p.root),
+                isRoot: false,
+              }
+            })
+        )
+      }
     }
-    if (nx) {
+    const nx_provider = getSetting<boolean>("providers.nx")
+    if (nx_provider && nx) {
       ret.push(
         ...nx.projects.map((p) => {
           return {
-            label: `${p.name} (NX)`,
+            label: `${p.name} ${providers_suffix("nx")}`,
             emoji: `${getFolderEmoji(nx.root, p.root)}`,
             description: `at ${path.relative(nx.root, p.root)}`,
             root: Uri.file(p.root),
@@ -184,18 +239,23 @@ async function getPackageFolders(
         })
       )
     }
-    if (cargo) {
-      ret.push(
-        ...cargo.map((p) => {
-          return {
-            label: `${p.name} (Cargo)`,
-            emoji: `${getFolderEmoji(cwd, p.root)}`,
-            description: `at ${path.relative(cwd, p.root)}`,
-            root: Uri.file(p.root),
-            isRoot: false,
-          }
-        })
-      )
+    const cargo_provider = getSetting<boolean>("providers.cargo")
+    if (cargo_provider) {
+      const cargo = await getCargoProjects(options)
+
+      if (cargo) {
+        ret.push(
+          ...cargo.map((p) => {
+            return {
+              label: `${p.name} ${providers_suffix("cargo")}`,
+              emoji: `${getFolderEmoji(cwd, p.root)}`,
+              description: `at ${path.relative(cwd, p.root)}`,
+              root: Uri.file(p.root),
+              isRoot: false,
+            }
+          })
+        )
+      }
     }
     const out: WorkspaceFolderItem[] = uniqBy(ret, "root.fsPath").sort((a, b) =>
       a.root.fsPath.localeCompare(b.root.fsPath)
