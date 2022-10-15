@@ -9,23 +9,38 @@ import {
   OutputChannel,
   workspace as vscodeWorkspace,
 } from "vscode"
-
 import { GetProjectOptions, PackageAction, WorkspaceFolderItem } from "./types"
 import { getProjects, ProjectConfiguration } from "@nrwl/devkit"
 import { FsTree } from "nx/src/generators/tree"
 import { uniqBy, get as loGet } from "lodash"
-import { readFile, stat, access } from "node:fs/promises"
-import { constants as fsconstants, PathLike } from "node:fs"
+import { readFile, access } from "node:fs/promises"
+import { constants as fsconstants, existsSync, PathLike } from "node:fs"
 import { getSetting } from "./settings"
 
+type MemberList = {
+  name: string
+  root: string
+}[]
 const providers_suffix = (provider: string) => {
   const enabled = getSetting<boolean>("providers_suffix")
   return enabled ? `(${provider.toUpperCase()})` : ""
 }
+let output_channel: OutputChannel
 
-const output_channel: OutputChannel = window.createOutputChannel(
-  "monorepo-workspace"
-)
+export const log_error = (msg: string, title?: string) => {
+  title = title ? `${title} ` : ""
+
+  output_channel.appendLine(`error: ${title}${msg}`)
+}
+
+export const log_hint = (msg: string, title?: string) => {
+  title = title ? `${title} ` : ""
+  output_channel.appendLine(`hint: ${title}${msg}`)
+}
+
+export const log = (msg: string, title?: string) => {
+  output_channel.appendLine(`info: ${title}${msg}`)
+}
 
 async function checkFileExists(file: PathLike) {
   try {
@@ -76,7 +91,7 @@ async function getFolderDetails(project_root: string): Promise<string> {
     }
   }
 
-  return undefined
+  return ""
 }
 
 function getFolderEmoji(root: string, pkgRoot: string) {
@@ -116,10 +131,24 @@ function getFolderEmoji(root: string, pkgRoot: string) {
 
 // async function getFullWorkspace(options: GetProjectOptions) {}
 
+export function findUp(name: string, cwd = process.cwd()): string | undefined {
+  let up = path.resolve(cwd)
+  do {
+    cwd = up
+    const p = path.resolve(cwd, name)
+    if (existsSync(p)) return cwd
+    up = path.resolve(cwd, "../")
+  } while (up !== cwd)
+}
+
 async function getCargoProjects(
   options: GetProjectOptions
-): Promise<{ name: string; root: string }[]> {
-  const cargo_root = path.join(options.cwd, "Cargo.toml")
+): Promise<MemberList> {
+  const ws_root = findUp("Cargo.toml", options.cwd)
+  if (!ws_root) throw "Root not found"
+  log_hint(ws_root, "Gettings Cargo Packages from:")
+
+  const cargo_root = path.join(ws_root, "Cargo.toml")
 
   if (await checkFileExists(cargo_root)) {
     const cargo_content = await readFile(cargo_root)
@@ -127,31 +156,40 @@ async function getCargoProjects(
       cargo_content.toString()
     ) as { workspace: { members: string[] } }
 
-    return await Promise.all(
-      content.workspace.members.map(async (member) => {
-        const m_root = member
-        const m_cargo = path.join(options.cwd, m_root, "Cargo.toml")
-        const m_stat = await stat(m_cargo)
-        if (m_stat.isFile()) {
-          const m_content_raw = await readFile(m_cargo)
-          const m_content: { package: { name: string } } = parseToml(
-            m_content_raw.toString()
-          ) as { package: { name: string } }
+    const members = content.workspace?.members
+      ? await Promise.all(
+          content.workspace.members.map(async (member) => {
+            const m_root = member
+            const m_cargo = path.join(ws_root, m_root, "Cargo.toml")
 
-          return {
-            name: m_content.package.name,
-            root: path.join(options.cwd, m_root),
-          }
-        }
-      })
-    )
+            if (await checkFileExists(m_cargo)) {
+              const m_content_raw = await readFile(m_cargo)
+              const m_content: { package: { name: string } } = parseToml(
+                m_content_raw.toString()
+              ) as { package: { name: string } }
+
+              return {
+                name: m_content.package.name,
+                root: path.join(ws_root, m_root),
+              }
+            }
+          })
+        )
+      : []
+    if (members) {
+      return members.filter((m) => m !== undefined) as MemberList
+    }
   }
+  return []
 }
 
 function getNxProjects(
   options: GetProjectOptions
-): { root: string; projects: { root: string; name: string }[] } {
-  const nx_tree = new FsTree(options.cwd, false)
+): { root: string; projects: MemberList } | undefined {
+  const nx_root = findUp("nx.json", options.cwd)
+  if (!nx_root) return
+  const nx_tree = new FsTree(nx_root, false)
+
   const nx_proj: Map<string, ProjectConfiguration> = getProjects(nx_tree)
 
   const nx_ws: { name: string; root: string }[] = []
@@ -159,12 +197,12 @@ function getNxProjects(
   for (const project of nx_proj.entries()) {
     nx_ws.push({
       name: project[0],
-      root: path.join(options.cwd, project[1].root),
+      root: path.join(nx_root, project[1].root),
     })
   }
   return {
     projects: nx_ws,
-    root: options.cwd,
+    root: nx_root,
   }
 }
 
@@ -305,10 +343,28 @@ async function updateAll(items?: WorkspaceFolderItem[], clean = false) {
 
 async function select(items?: WorkspaceFolderItem[]) {
   if (!items) items = await getPackageFolders()
-  if (!items) return
+  if (!items) {
+    await window.showInformationMessage(
+      `VSCode Monoworkspace
+You are currently not in a compatible workspace. Open the root folder of your monorepo containing any of:
 
-  output_channel.appendLine(
-    `${JSON.stringify(items.map((p) => p.root.fsPath))}`
+- package.json
+- Cargo.toml
+- nx.json
+
+if you think this is an error, please file an issue here:
+
+http://github.com/mtb-tools/vscode-mono-workspace
+`,
+      {
+        modal: true,
+      }
+    )
+    return
+  }
+  log_hint(
+    `${JSON.stringify(items.map((p) => p.root.fsPath))}`,
+    "Resolved Packages"
   )
   const itemsSet = new Map(items.map((item) => [item.root.fsPath, item]))
   const folders = vscodeWorkspace.workspaceFolders
@@ -369,18 +425,20 @@ async function openPackage(action: PackageAction) {
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: ExtensionContext) {
+  output_channel = window.createOutputChannel("monorepo-workspace")
+
   context.subscriptions.push(
-    commands.registerCommand("extension.openPackageCurrentWindow", () =>
+    commands.registerCommand("mono-workspace.openPackageCurrentWindow", () =>
       openPackage(PackageAction.currentWindow)
     ),
-    commands.registerCommand("extension.openPackageNewWindow", () =>
+    commands.registerCommand("mono-workspace.openPackageNewWindow", () =>
       openPackage(PackageAction.newWindow)
     ),
-    commands.registerCommand("extension.openPackageWorkspaceFolder", () =>
+    commands.registerCommand("mono-workspace.openPackageWorkspaceFolder", () =>
       openPackage(PackageAction.workspaceFolder)
     ),
-    commands.registerCommand("extension.updateAll", () => updateAll()),
-    commands.registerCommand("extension.select", () => select())
+    commands.registerCommand("mono-workspace.updateAll", () => updateAll()),
+    commands.registerCommand("mono-workspace.select", () => select())
   )
 }
 

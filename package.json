@@ -2,7 +2,7 @@
   "name": "vscode-mono-workspace",
   "displayName": "Mono Workspace",
   "description": "Manage monorepos with multi-root workspaces. Supports Cargo, NX, Lerna, Yarn, Pnpm, Rushjs and recursive package directories",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "publisher": "melMass",
   "repository": "http://github.com/mtb-tools/vscode-mono-workspace",
   "license": "MIT",
@@ -22,30 +22,37 @@
     "cargo"
   ],
   "activationEvents": [
-    "workspaceContains:**/package.json"
+    "workspaceContains:**/package.json",
+    "workspaceContains:**/Cargo.toml",
+    "workspaceContains:**/nx.json",
+    "onCommand:mono-workspace.openPackageCurrentWindow",
+    "onCommand:mono-workspace.openPackageNewWindow",
+    "onCommand:mono-workspace.openPackageWorkspaceFolder",
+    "onCommand:mono-workspace.select",
+    "onCommand:mono-workspace.updateAll"
   ],
   "main": "./out/extension.js",
   "icon": "images/icon.png",
   "contributes": {
     "commands": [
       {
-        "command": "extension.openPackageCurrentWindow",
+        "command": "mono-workspace.openPackageCurrentWindow",
         "title": "Monorepo: Open Package (Current Window)"
       },
       {
-        "command": "extension.openPackageNewWindow",
+        "command": "mono-workspace.openPackageNewWindow",
         "title": "Monorepo: Open Package (New Window)"
       },
       {
-        "command": "extension.openPackageWorkspaceFolder",
+        "command": "mono-workspace.openPackageWorkspaceFolder",
         "title": "Monorepo: Open Package (Workspace Folder)"
       },
       {
-        "command": "extension.select",
+        "command": "mono-workspace.select",
         "title": "Monorepo: Select Workspace Folders"
       },
       {
-        "command": "extension.updateAll",
+        "command": "mono-workspace.updateAll",
         "title": "Monorepo: Sync Workspace Folders"
       }
     ],

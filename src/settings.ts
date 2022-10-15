@@ -32,7 +32,7 @@ interface FolderOptions {
   custom?: string[]
 }
 
-export function getSetting<T>(key: string): T {
+export function getSetting<T>(key: string): T | undefined {
   const config = vscodeWorkspace.getConfiguration("monoWorkspace")
   return config.get<T>(key)
 }
