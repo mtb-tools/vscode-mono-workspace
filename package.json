@@ -147,12 +147,12 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "node build.mjs",
+    "vscode:prepublish": "pnpm run compile",
+    "compile": "node build.mjs && pnpm postcompile",
     "postcompile": "du -hs out/extension.js",
     "compile:dev": "node build.mjs",
     "lint": "eslint src --ext ts",
-    "pretest": "npm run compile && npm run lint",
+    "pretest": "pnpm run compile && pnpm run lint",
     "test": "node ./out/test/run-test.js",
     "package": "vsce package",
     "package:install": "vsce package && code --install-extension ./*vsix",
@@ -184,7 +184,8 @@
     "prettier": "2.2.1",
     "typescript": "4.8.4",
     "vsce": "^2.11.0",
-    "vscode-test": "1.6.1"
+    "@vscode/test-electron": "1.6.1",
+    "nx": "14.8.4"
   },
   "dependencies": {
     "jsonc": "^2.0.0",

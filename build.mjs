@@ -4,7 +4,7 @@ import { jsonc } from "jsonc"
 
 const pkg = await readFile("./package.json")
 const pkg_parsed = jsonc.parse(pkg.toString())
-console.log(pkg_parsed.devDependencies)
+
 await esbuild.build({
   entryPoints: ["src/extension.ts"],
   bundle: true,
