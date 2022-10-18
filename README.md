@@ -1,4 +1,5 @@
-# Mono Workspace (FORKED FROM MONOREPO WORKSPACE BY FLOKE)
+# Mono Workspace 
+### fork of folke/vscode-monorepo-workspace
 
 Manage monorepos with multi-root workspaces. Supports Cargo, NX, Lerna, Yarn, Pnpm, Rushjs and recursive package directories.
 
