@@ -227,7 +227,7 @@ export function activate(context: ExtensionContext) {
       openPackage(PackageAction.workspaceFolder)
     ),
     commands.registerCommand("mono-workspace.updateAll", () => updateAll()),
-    commands.registerCommand("mono-workspace.save_set", () => saveSet()),
+    // commands.registerCommand("mono-workspace.save_set", () => saveSet()),
     commands.registerCommand("mono-workspace.select", () => select())
   )
 }
