@@ -1,5 +1,6 @@
-# Mono Workspace 
-### fork of folke/vscode-monorepo-workspace
+# Mono Workspace
+
+> fork of folke/vscode-monorepo-workspace (last update was in 2019)
 
 Manage monorepos with multi-root workspaces. Supports Cargo, NX, Lerna, Yarn, Pnpm, Rushjs and recursive package directories.
 
@@ -44,9 +45,8 @@ You can find all options under "Monorepo Workspace" in your configurtion.
 
 ## Release Notes
 
-### 1.3.3
+### 1.3.3 -> 2.0.0
 
-Forked here by Mel.
 Added support for NX & Cargo.
 Updated dependencies
 
