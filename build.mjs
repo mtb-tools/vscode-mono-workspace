@@ -17,6 +17,7 @@ await esbuild.build({
     "rxjs",
     "ts-node",
     "@swc/wasm",
+    "@swc-node",
     "@swc/core-darwin-arm64",
     "./remove-old-cache-records.js",
     "../../bin/run-executor.js",
