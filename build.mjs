@@ -1,4 +1,9 @@
 import esbuild from "esbuild"
+import { readFile } from "fs/promises"
+import { jsonc } from "jsonc"
+
+const pkg = await readFile("./package.json")
+const pkg_parsed = jsonc.parse(pkg.toString())
 
 await esbuild.build({
   entryPoints: ["src/extension.ts"],
@@ -15,6 +20,7 @@ await esbuild.build({
     "@swc/core-darwin-arm64",
     "./remove-old-cache-records.js",
     "../../bin/run-executor.js",
+    ...Object.keys(pkg_parsed.devDependencies),
   ],
   mainFields: ["module", "main"],
   minify: true,

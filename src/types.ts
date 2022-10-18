@@ -19,3 +19,42 @@ export interface WorkspaceFolderItem extends QuickPickItem {
   isRoot?: boolean
   description?: string
 }
+
+/// Settings
+
+interface ProviderOptions {
+  core: boolean
+  cargo: boolean
+  nx: boolean
+}
+export interface MonoworkspaceMember {
+  name: string
+  root: string
+}
+export interface ExtensionOptions {
+  includeRoot?: boolean
+  providers_suffix?: boolean
+  fetch_descriptions?: boolean
+  providers?: ProviderOptions
+  folders?: FolderOptions
+  sets?: { name: string; members: MonoworkspaceMember[] }[]
+}
+
+// Emoji used per type
+interface PrefixOptions {
+  apps: string
+  libs: string
+  tools: string
+  root: string
+  unknown: string
+}
+interface RegexOptions {
+  apps: string
+  libs: string
+  tools: string
+}
+interface FolderOptions {
+  prefix: PrefixOptions
+  regex: RegexOptions
+  custom?: string[]
+}
