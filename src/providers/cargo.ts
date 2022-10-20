@@ -4,14 +4,14 @@ import { log_hint } from "../extension"
 import { GetProjectOptions, MonoworkspaceMember } from "../types"
 import { checkFileExists, findFiles, findUp, readFile } from "../utils"
 import { parse as parseToml } from "toml"
-import { Uri, workspace as vscodeWorkspace } from "vscode"
+import { Uri } from "vscode"
 type CargoWorkspace = { workspace: { members: string[] } }
 
 export async function getCargoProjects(
   options: GetProjectOptions
 ): Promise<MonoworkspaceMember[]> {
   const ws_root = await findUp("Cargo.toml", options.cwd?.fsPath)
-  if (!ws_root) throw "Root not found"
+  if (!ws_root) return []
   log_hint(ws_root, "Gettings Cargo Packages from:")
 
   const cargo_root = path.join(ws_root, "Cargo.toml")

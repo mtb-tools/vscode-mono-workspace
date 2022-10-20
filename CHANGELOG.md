@@ -4,6 +4,10 @@
 
 Please report any issues during this phase on the [github repository](https://github.com/mtb-tools/vscode-mono-workspace/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc):
 
+### 1.4.0
+
+- fix: Non Cargo workspace
+
 ### 1.3.9
 
 - ci: autodeploy on OpenVSX

@@ -1,9 +1,10 @@
 import path from "path"
 import json from "json5"
 import { findUp, getPackage } from "../package"
-import { Uri, workspace as vscodeWorkspace } from "vscode"
+import { Uri } from "vscode"
 import { readFile } from "../utils"
 import { log_hint } from "../extension"
+
 export enum WorkspaceProviderType {
   single = "single",
   lerna = "lerna",

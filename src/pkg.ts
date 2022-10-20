@@ -64,26 +64,27 @@ export async function getPackageFolders(
       }
     }
     log_hint(`Getting NX Projects if any.`)
-    const nx = await getNxProjects(options)
     const nx_provider = getSetting<boolean>("providers.nx")
-    if (nx_provider && nx) {
-      ret.push(
-        ...(await Promise.all(
-          nx.projects.map(async (p) => {
-            return {
-              label: `${p.name} ${providers_suffix("nx")}`,
-              emoji: `${getFolderEmoji(nx.root, p.root)}`,
-              root: p.root,
-              isRoot: false,
-            }
-          })
-        ))
-      )
+    if (nx_provider) {
+      const nx = await getNxProjects(options)
+      if (nx) {
+        ret.push(
+          ...(await Promise.all(
+            nx.projects.map(async (p) => {
+              return {
+                label: `${p.name} ${providers_suffix("nx")}`,
+                emoji: `${getFolderEmoji(nx.root, p.root)}`,
+                root: p.root,
+                isRoot: false,
+              }
+            })
+          ))
+        )
+      }
     }
     const cargo_provider = getSetting<boolean>("providers.cargo")
     if (cargo_provider) {
       const cargo = await getCargoProjects(options)
-
       if (cargo) {
         ret.push(
           ...(await Promise.all(
@@ -108,9 +109,6 @@ export async function getPackageFolders(
           return e
         })
     )
-
-    // output_channel.appendLine(`Found projects: ${JSON.stringify(out)}`)
-
     return out
   }
 }

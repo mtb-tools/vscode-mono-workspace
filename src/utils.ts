@@ -7,7 +7,6 @@ export async function checkFileExists(file: Uri | string) {
   }
   try {
     await workspace.fs.stat(file)
-    //await access(file, fsConstants.F_OK)
     return true
   } catch {
     return false
