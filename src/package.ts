@@ -29,9 +29,6 @@ export async function findPackages(
   patterns: string[],
   options?: FindPackagesOption
 ): Promise<Uri[]> {
-  log_hint("Running Fast Glob")
-
-  //const fastGlob = (await import("fast-glob")).default
   if (!options) options = {}
 
   if (!options.ignore) options.ignore = DEFAULT_IGNORE

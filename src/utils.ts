@@ -13,7 +13,8 @@ export async function checkFileExists(file: Uri | string) {
     return false
   }
 }
-const DEFAULT_IGNORE = "**/{node_modules,test,tests,build,target,.git}/**"
+const DEFAULT_IGNORE =
+  "**/{node_modules,test,tests,build,target,.git,dist,out}/**"
 export async function findFiles(pattern: string, ignore = DEFAULT_IGNORE) {
   return await workspace.findFiles(pattern, ignore)
 }

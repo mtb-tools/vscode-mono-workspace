@@ -35,18 +35,20 @@ export async function getCargoProjects(
           `Resolved ${JSON.stringify(resolved_members.map((e) => e.fsPath))}`
         )
         // const m_cargo = path.join(ws_root, m_root, "Cargo.toml")
-        for (const m of resolved_members) {
-          const m_content_raw = await readFile(m)
-          const m_content: { package: { name: string } } = parseToml(
-            m_content_raw
-          ) as { package: { name: string } }
+        return await Promise.all(
+          resolved_members.map(async (m) => {
+            const m_content_raw = await readFile(m)
+            const m_content: { package: { name: string } } = parseToml(
+              m_content_raw
+            ) as { package: { name: string } }
 
-          return {
-            name: m_content.package.name,
-            root: Uri.file(path.dirname(m.fsPath)),
-          }
-        }
+            return {
+              name: m_content.package.name,
+              root: Uri.file(path.dirname(m.fsPath)),
+            }
+          })
+        )
       })
     )
-  ).filter((m) => m !== undefined) as MonoworkspaceMember[]
+  ).flat()
 }
