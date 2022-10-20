@@ -188,7 +188,6 @@
   },
   "dependencies": {
     "compare-versions": "^5.0.1",
-    "fast-glob": "^3.2.12",
     "globrex": "^0.1.2",
     "json5": "^2.2.1",
     "lodash": "^4.17.21",
