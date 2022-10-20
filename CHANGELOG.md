@@ -4,6 +4,11 @@
 
 Please report any issues during this phase on the [github repository](https://github.com/mtb-tools/vscode-mono-workspace/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc):
 
+### 1.3.9
+
+- ci: autodeploy on OpenVSX
+- fix: Bug when running commands on empty workspaces.
+
 ### 1.3.8
 
 - feature: Added initial support for vscode.dev
