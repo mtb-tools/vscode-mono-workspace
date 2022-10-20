@@ -16,7 +16,9 @@ import { log_hint } from "./extension"
 export async function getPackageFolders(
   includeRoot = true
 ): Promise<WorkspaceFolderItem[] | undefined> {
-  const cwd = vscodeWorkspace.workspaceFolders?.[0].uri
+  log_hint("Getting workspace first folder")
+  const cwd = vscodeWorkspace.workspaceFolders?.[0]?.uri
+
   if (cwd) {
     const options = {
       cwd,
