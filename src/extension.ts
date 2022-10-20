@@ -11,6 +11,7 @@ import {
   workspace as vscodeWorkspace,
 } from "vscode"
 import welcome from "../welcome.json"
+import extension_json from "../package.json"
 import { compareVersions } from "compare-versions"
 import json from "json5"
 import {
@@ -160,7 +161,7 @@ You are currently not in a compatible workspace. Open the root folder of your mo
 
 if you think this is an error, please file an issue here:
 
-http://github.com/mtb-tools/vscode-mono-workspace
+https://github.com/mtb-tools/vscode-mono-workspace
 `,
       {
         modal: true,

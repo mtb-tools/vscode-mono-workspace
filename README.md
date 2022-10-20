@@ -45,19 +45,4 @@ You can find all options under "Monorepo Workspace" in your configurtion.
 
 ## Release Notes
 
-### 1.3.3 -> 2.0.0
-
-Added support for NX & Cargo.
-Updated dependencies
-
-### 1.2.0
-
-Added option to configure custom package types
-
-### 1.1.3
-
-Fixed an issue with workspace folders on Windows
-
-### 1.0.0
-
-Initial release :tada:
+See the [CHANGELOG](./CHANGELOG.md)
