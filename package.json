@@ -139,8 +139,9 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "pnpm run compile",
+    "vscode:prepublish": "pnpm run compile && pnpm run compile:web",
     "compile": "node build.mjs",
+    "compile:web": "node build_web.mjs",
     "compile:dev": "node build.mjs -dev",
     "compile:dev-web": "node build_web.mjs -dev",
     "lint": "eslint src --ext ts",
