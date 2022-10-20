@@ -1,30 +1,39 @@
 import { parse as parseToml } from "toml"
-import { jsonc as json } from "jsonc"
+import json from "json5"
 import { getFolderEmoji, getSetting } from "./settings"
-import path from "node:path"
-import { checkFileExists } from "./utils"
-import { readFile } from "node:fs/promises"
+import path from "path"
+import { checkFileExists, readFile } from "./utils"
+// import { readFile } from "node:fs/promises"
 import { get as loGet, uniqBy } from "lodash"
 import { WorkspaceFolderItem } from "./types"
 import { getCargoProjects } from "./providers/cargo"
 import { Uri, workspace as vscodeWorkspace } from "vscode"
 import { getNxProjects } from "./providers/nx"
 import { getMultiProjects } from "./providers/core"
+import { log_hint } from "./extension"
+// import { performance } from "perf_hooks"
 
 export async function getPackageFolders(
   includeRoot = true
 ): Promise<WorkspaceFolderItem[] | undefined> {
-  const cwd = vscodeWorkspace.workspaceFolders?.[0].uri.fsPath
+  const cwd = vscodeWorkspace.workspaceFolders?.[0].uri
   if (cwd) {
     const options = {
       cwd,
       includeRoot: true,
     }
     const ret: WorkspaceFolderItem[] = []
-    const nx = await getNxProjects(options)
+
+    log_hint(`Check if core is required`)
     const core_provider = getSetting<boolean>("providers.core")
     if (core_provider) {
+      log_hint(`Getting core projects`)
+      // var start = performance.now()
       const workspace = await getMultiProjects(options)
+      // var end = performance.now()
+      // var time = end - start
+      // log_hint("Resolving core packages took: " + time / 1000 + "s")
+
       if (workspace) {
         if (includeRoot)
           ret.push({
@@ -33,21 +42,18 @@ export async function getPackageFolders(
             description: `${
               workspace.type[0].toUpperCase() + workspace.type.slice(1)
             } Workspace Root`,
-            root: Uri.file(workspace.root),
+            root: workspace.root,
             isRoot: true,
           })
         ret.push(
           ...(await Promise.all(
-            workspace
-              .getPackages()
+            (await workspace.getPackages())
               .filter((p) => p.root !== workspace.root)
               .map(async (p) => {
                 return {
                   label: `${p.name} ${providers_suffix("core")}`,
                   emoji: `${getFolderEmoji(workspace.root, p.root)}`,
-                  description: getFolderDescription(workspace.root, p.root),
-                  detail: await getFolderDetails(p.root),
-                  root: Uri.file(p.root),
+                  root: p.root,
                   isRoot: false,
                 }
               })
@@ -55,6 +61,8 @@ export async function getPackageFolders(
         )
       }
     }
+    log_hint(`Getting NX Projects if any.`)
+    const nx = await getNxProjects(options)
     const nx_provider = getSetting<boolean>("providers.nx")
     if (nx_provider && nx) {
       ret.push(
@@ -63,9 +71,7 @@ export async function getPackageFolders(
             return {
               label: `${p.name} ${providers_suffix("nx")}`,
               emoji: `${getFolderEmoji(nx.root, p.root)}`,
-              description: getFolderDescription(nx.root, p.root),
-              detail: await getFolderDetails(p.root),
-              root: Uri.file(p.root),
+              root: p.root,
               isRoot: false,
             }
           })
@@ -83,9 +89,7 @@ export async function getPackageFolders(
               return {
                 label: `${p.name} ${providers_suffix("cargo")}`,
                 emoji: `${getFolderEmoji(cwd, p.root)}`,
-                description: getFolderDescription(cwd, p.root),
-                detail: await getFolderDetails(p.root),
-                root: Uri.file(p.root),
+                root: p.root,
                 isRoot: false,
               }
             })
@@ -93,8 +97,14 @@ export async function getPackageFolders(
         )
       }
     }
-    const out: WorkspaceFolderItem[] = uniqBy(ret, "root.fsPath").sort((a, b) =>
-      a.root.fsPath.localeCompare(b.root.fsPath)
+    const out: WorkspaceFolderItem[] = await Promise.all(
+      uniqBy(ret, "root.fsPath")
+        .sort((a, b) => a.root.fsPath.localeCompare(b.root.fsPath))
+        .map(async (e) => {
+          e.description = getFolderDescription(cwd, e.root)
+          e.detail = await getFolderDetails(e.root)
+          return e
+        })
     )
 
     // output_channel.appendLine(`Found projects: ${JSON.stringify(out)}`)
@@ -103,8 +113,8 @@ export async function getPackageFolders(
   }
 }
 
-function getFolderDescription(root: string, project_root: string): string {
-  return `at ${path.relative(root, project_root)}`
+function getFolderDescription(root: Uri, project_root: Uri): string {
+  return `at ${path.relative(root.fsPath, project_root.fsPath)}`
 }
 
 export const package_description: Record<
@@ -128,16 +138,18 @@ export const providers_suffix = (provider: string) => {
   return enabled ? `(${provider.toUpperCase()})` : ""
 }
 
-export async function getFolderDetails(project_root: string): Promise<string> {
+export async function getFolderDetails(project_root: Uri): Promise<string> {
   const complex = getSetting<boolean>("fetch_descriptions")
   if (complex) {
+    log_hint(
+      `Getting descriptions for packages ${path.basename(project_root.fsPath)}.`
+    )
     for (const pkg_type in package_description) {
-      const pkg = path.join(project_root, pkg_type)
+      const pkg = path.join(project_root.fsPath, pkg_type)
+
       if (await checkFileExists(pkg)) {
         const cont = await readFile(pkg)
-        const cont_parsed = package_description[pkg_type].convert(
-          cont.toString()
-        )
+        const cont_parsed = package_description[pkg_type].convert(cont)
         const cont_description = loGet(
           cont_parsed,
           package_description[pkg_type].access
