@@ -1,6 +1,6 @@
-import { getWorkspace } from "ultra-runner"
 import { GetProjectOptions } from "../types"
+import { Workspace } from "../workspace"
 
 export async function getMultiProjects(options: GetProjectOptions) {
-  return await getWorkspace(options)
+  return await Workspace.getWorkspace(options)
 }

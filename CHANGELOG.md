@@ -1,10 +1,11 @@
 # Release Notes
 
-## 1.3.3
+## 1.3.3 -> 2.0 (Prerelease)
 
-- Forked here by Mel.
-- Added support for NX & Cargo.
-- Updated dependencies
+- Forked here by @melMass.
+- Added support for NX Monorepo & Cargo workspaces.
+- Updated dependencies.
+- Reduced bundle size.
 
 ## 1.3.0
 

@@ -1,26 +1,33 @@
-import path from "node:path"
+import path from "path"
 import {
   commands,
   ExtensionContext,
   Uri,
   window,
   OutputChannel,
+  extensions,
+  env,
   // ConfigurationTarget,
   workspace as vscodeWorkspace,
 } from "vscode"
-import { jsonc as json } from "jsonc"
+import welcome from "../welcome.json"
+import { compareVersions } from "compare-versions"
+import json from "json5"
 import {
   ExtensionOptions,
   MonoworkspaceMember,
   PackageAction,
   WorkspaceFolderItem,
 } from "./types"
-import { readFile, writeFile } from "node:fs/promises"
+// import { readFile, writeFile } from "node:fs/promises"
 import { getSetting } from "./settings"
 import { checkFileExists } from "./utils"
 import { getPackageFolders } from "./pkg"
 import { getMultiProjects } from "./providers/core"
+import { resolve_util } from "./debug"
 // import { logUtils } from "./utils"
+
+const extensionId = "melmass.vscode-mono-workspace"
 
 /// globals
 let output_channel: OutputChannel
@@ -78,7 +85,7 @@ async function updateAll(items?: WorkspaceFolderItem[], clean = false) {
 async function saveSet() {
   log_hint("Saving current set")
   const current_set = vscodeWorkspace.workspaceFolders || []
-  const pth = vscodeWorkspace.workspaceFolders?.[0].uri.fsPath
+  const pth = vscodeWorkspace.workspaceFolders?.[0].uri
   const workspace = await getMultiProjects({ cwd: pth, includeRoot: true })
   const set_name = await window.showInputBox({
     ignoreFocusOut: true,
@@ -90,11 +97,14 @@ async function saveSet() {
   }
   if (workspace) {
     log_hint(`Found workspace at ${workspace.root}`)
-    const root = path.join(workspace.root, ".vscode", "settings.json")
+    const root = path.join(workspace.root.fsPath, ".vscode", "settings.json")
     let existing_sets: { name: string; members: MonoworkspaceMember[] }[] = []
     let root_settings: { monoWorkspace?: ExtensionOptions } = {}
     if (await checkFileExists(root)) {
-      const root_settings_raw = await readFile(root)
+      // const root_settings_raw = await readFile(root)
+      const root_settings_raw = await vscodeWorkspace.fs.readFile(
+        Uri.file(root)
+      )
       log_hint(
         `Read settings ${root}, with content: ${root_settings_raw.toString()}`
       )
@@ -114,7 +124,7 @@ async function saveSet() {
         members: current_set.map((f) => {
           return {
             name: f.name,
-            root: f.uri.fsPath,
+            root: f.uri,
           }
         }),
       },
@@ -123,7 +133,12 @@ async function saveSet() {
 
     //const old_sets = vscodeWorkspace.getConfiguration("monoWorkspace.sets")
 
-    await writeFile(root, json.stringify(root_settings, { space: 4 }))
+    await vscodeWorkspace.fs.writeFile(
+      Uri.file(root),
+      Buffer.from(json.stringify(root_settings, { space: 4 }), "utf-8")
+    )
+    // await writeFile(root, json.stringify(root_settings, { space: 4 }))
+
     await window.showInformationMessage("Monoworkspace config has been updated")
     return
   }
@@ -131,6 +146,8 @@ async function saveSet() {
 }
 
 async function select(items?: WorkspaceFolderItem[]) {
+  log_hint(`Getting packages.`)
+
   if (!items) items = await getPackageFolders()
   if (!items) {
     await window.showInformationMessage(
@@ -214,6 +231,7 @@ async function openPackage(action: PackageAction) {
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: ExtensionContext) {
+  showWhatsNew(context) // show notification in case of a major release i.e. 1.0.0 -> 2.0.0
   output_channel = window.createOutputChannel("monorepo-workspace")
 
   context.subscriptions.push(
@@ -227,10 +245,35 @@ export function activate(context: ExtensionContext) {
       openPackage(PackageAction.workspaceFolder)
     ),
     commands.registerCommand("mono-workspace.updateAll", () => updateAll()),
-    commands.registerCommand("mono-workspace.save_set", () => saveSet()),
-    commands.registerCommand("mono-workspace.select", () => select())
+    // commands.registerCommand("mono-workspace.save_set", () => saveSet()),
+    commands.registerCommand("mono-workspace.select", () => select()),
+    commands.registerCommand("mono-workspace.resolve", () => resolve_util())
   )
 }
 
 // this method is called when your extension is deactivated
 // export function deactivate() {}
+
+async function showWhatsNew(context: ExtensionContext) {
+  const previousVersion = context.globalState.get<string>(extensionId)
+  const currentVersion = context.extension.packageJSON.version
+
+  // store latest version
+  context.globalState.update(extensionId, currentVersion)
+
+  if (
+    previousVersion === undefined ||
+    compareVersions(previousVersion, currentVersion) === -1
+  ) {
+    const actions = [{ title: "Go to repository" }]
+    const message = `Monoworkspace ${currentVersion} - ${welcome["v1.3.8"].body}`
+
+    const result = await window.showInformationMessage(message, ...actions)
+
+    if (result !== null && result === actions[0]) {
+      await env.openExternal(
+        Uri.parse("https://github.com/mtb-tools/vscode-mono-workspace")
+      )
+    }
+  }
+}

@@ -1,6 +1,10 @@
 name: 🛍 VSCode Marketplace
 on:
   workflow_dispatch:
+    inputs:
+      publish_extensions:
+        required: true
+        type: boolean
   push:
     tags:
       - "v*"
@@ -80,7 +84,7 @@ jobs:
 
       - shell: pwsh
         run: echo "target=${{ matrix.platform }}-${{ matrix.arch }}" >> $env:GITHUB_ENV
-      - run: npx vsce package --no-dependencies --target ${{ env.target }}
+      - run: npx vsce package --pre-release --no-dependencies --target ${{ env.target }}
       - uses: actions/upload-artifact@v3
         with:
           name: ${{ env.target }}
@@ -89,9 +93,9 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: build
-    if: success() && startsWith( github.ref, 'refs/tags/')
+    if: ${{ inputs.publish_extensions || (success() && startsWith( github.ref, 'refs/tags/')) }}
     steps:
       - uses: actions/download-artifact@v3
-      - run: npx vsce publish --no-dependencies --packagePath $(find . -iname *.vsix)
+      - run: npx vsce publish --pre-release --no-dependencies --packagePath $(find . -iname *.vsix)
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
