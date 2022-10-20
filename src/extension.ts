@@ -246,8 +246,8 @@ export function activate(context: ExtensionContext) {
     ),
     commands.registerCommand("mono-workspace.updateAll", () => updateAll()),
     // commands.registerCommand("mono-workspace.save_set", () => saveSet()),
-    commands.registerCommand("mono-workspace.select", () => select()),
-    commands.registerCommand("mono-workspace.resolve", () => resolve_util())
+    commands.registerCommand("mono-workspace.select", () => select())
+    // commands.registerCommand("mono-workspace.resolve", () => resolve_util())
   )
 }
 
