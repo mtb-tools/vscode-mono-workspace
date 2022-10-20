@@ -1,48 +1,54 @@
-import { readFile } from "node:fs/promises"
-import path from "node:path"
+// import { readFile } from "node:fs/promises"
+import path from "path"
 import { log_hint } from "../extension"
 import { GetProjectOptions, MonoworkspaceMember } from "../types"
-import { checkFileExists, findUp } from "../utils"
+import { checkFileExists, findFiles, findUp, readFile } from "../utils"
 import { parse as parseToml } from "toml"
+import { Uri, workspace as vscodeWorkspace } from "vscode"
+type CargoWorkspace = { workspace: { members: string[] } }
 
 export async function getCargoProjects(
   options: GetProjectOptions
 ): Promise<MonoworkspaceMember[]> {
-  const ws_root = await findUp("Cargo.toml", options.cwd)
+  const ws_root = await findUp("Cargo.toml", options.cwd?.fsPath)
   if (!ws_root) throw "Root not found"
   log_hint(ws_root, "Gettings Cargo Packages from:")
 
   const cargo_root = path.join(ws_root, "Cargo.toml")
 
-  if (await checkFileExists(cargo_root)) {
-    const cargo_content = await readFile(cargo_root)
-    const content: { workspace: { members: string[] } } = parseToml(
-      cargo_content.toString()
-    ) as { workspace: { members: string[] } }
+  if (!(await checkFileExists(cargo_root))) return []
 
-    const members = content.workspace?.members
-      ? await Promise.all(
-          content.workspace.members.map(async (member) => {
-            const m_root = member
-            const m_cargo = path.join(ws_root, m_root, "Cargo.toml")
+  const cargo_content = await readFile(cargo_root)
+  const content: CargoWorkspace = parseToml(
+    cargo_content.toString()
+  ) as CargoWorkspace
 
-            if (await checkFileExists(m_cargo)) {
-              const m_content_raw = await readFile(m_cargo)
-              const m_content: { package: { name: string } } = parseToml(
-                m_content_raw.toString()
-              ) as { package: { name: string } }
+  const members = content.workspace?.members
+  if (!members) return []
+  return (
+    await Promise.all(
+      content.workspace.members.map(async (member) => {
+        const abs_member = path.join(member, "Cargo.toml")
+        const resolved_members = await findFiles(abs_member)
+        log_hint(`Member ${abs_member}`)
+        log_hint(
+          `Resolved ${JSON.stringify(resolved_members.map((e) => e.fsPath))}`
+        )
+        // const m_cargo = path.join(ws_root, m_root, "Cargo.toml")
+        return await Promise.all(
+          resolved_members.map(async (m) => {
+            const m_content_raw = await readFile(m)
+            const m_content: { package: { name: string } } = parseToml(
+              m_content_raw
+            ) as { package: { name: string } }
 
-              return {
-                name: m_content.package.name,
-                root: path.join(ws_root, m_root),
-              }
+            return {
+              name: m_content.package.name,
+              root: Uri.file(path.dirname(m.fsPath)),
             }
           })
         )
-      : []
-    if (members) {
-      return members.filter((m) => m !== undefined) as MonoworkspaceMember[]
-    }
-  }
-  return []
+      })
+    )
+  ).flat()
 }

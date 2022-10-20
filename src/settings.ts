@@ -1,12 +1,12 @@
-import path from "node:path"
-import { workspace as vscodeWorkspace } from "vscode"
+import path from "path"
+import { Uri, workspace as vscodeWorkspace } from "vscode"
 
 export function getSetting<T>(key: string): T | undefined {
   const config = vscodeWorkspace.getConfiguration("monoWorkspace")
   return config.get<T>(key)
 }
 
-export function getFolderEmoji(root: string, pkgRoot: string) {
+export function getFolderEmoji(root: Uri, pkgRoot: Uri) {
   // const configg = vscodeWorkspace.getConfiguration()
   // const icon_theme = configg.workbench.iconTheme
 
@@ -20,7 +20,7 @@ export function getFolderEmoji(root: string, pkgRoot: string) {
 
   if (root == pkgRoot) return getSetting<string>("folders.prefix.root") || ""
   //config.get<string>("prefix.root") || ""
-  const dir = path.relative(root, pkgRoot)
+  const dir = path.relative(root.fsPath, pkgRoot.fsPath)
 
   // Use custom prefixes first
   const custom = getSetting<{ regex: string; prefix: string }[]>(

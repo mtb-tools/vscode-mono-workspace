@@ -11,7 +11,17 @@
         "isDefault": true
       },
       "problemMatcher": [],
-      "label": "npm: compile",
+      "label": "npm: compile:dev",
+    },
+    {
+      "type": "npm",
+      "script": "compile:dev-web",
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "problemMatcher": [],
+      "label": "npm: compile:dev-web",
     }
   ]
 }

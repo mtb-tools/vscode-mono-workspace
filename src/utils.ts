@@ -1,15 +1,31 @@
-import { PathLike, constants as fsConstants } from "node:fs"
-import { access } from "node:fs/promises"
-import path from "node:path"
-import { OutputChannel } from "vscode"
+import path from "path"
+import { OutputChannel, Uri, workspace } from "vscode"
 
-export async function checkFileExists(file: PathLike) {
+export async function checkFileExists(file: Uri | string) {
+  if (typeof file === "string") {
+    file = Uri.file(file)
+  }
   try {
-    await access(file, fsConstants.F_OK)
+    await workspace.fs.stat(file)
+    //await access(file, fsConstants.F_OK)
     return true
   } catch {
     return false
   }
+}
+const DEFAULT_IGNORE =
+  "**/{node_modules,test,tests,build,target,.git,dist,out}/**"
+export async function findFiles(pattern: string, ignore = DEFAULT_IGNORE) {
+  return await workspace.findFiles(pattern, ignore)
+}
+
+export async function readFile(file: Uri | string) {
+  if (typeof file === "string") {
+    file = Uri.file(file)
+  }
+  const bytes = await workspace.fs.readFile(file)
+  return Buffer.from(bytes).toString("utf8")
+  //return new TextDecoder('utf-8').decode(bytes);
 }
 
 export async function findUp(

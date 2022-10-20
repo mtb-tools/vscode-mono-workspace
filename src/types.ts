@@ -1,14 +1,31 @@
-import type { WorkspaceProviderType } from "ultra-runner"
 import type { QuickPickItem, Uri } from "vscode"
+import type { PackageJson as PJson } from "type-fest"
+export declare type PackageJson = PJson & {
+  name: string
+  ultra?: {
+    concurrent?: string[]
+  }
+}
+export declare type PackageJsonWithRoot = PackageJson & {
+  root: string
+}
 
 export enum PackageAction {
   newWindow,
   currentWindow,
   workspaceFolder,
 }
+export declare enum WorkspaceProviderType {
+  single = "single",
+  lerna = "lerna",
+  yarn = "yarn",
+  pnpm = "pnpm",
+  rush = "rush",
+  recursive = "recursive",
+}
 
 export type GetProjectOptions = Partial<{
-  cwd: string
+  cwd: Uri
   type: WorkspaceProviderType | undefined
   includeRoot: boolean
 }>
@@ -29,7 +46,7 @@ interface ProviderOptions {
 }
 export interface MonoworkspaceMember {
   name: string
-  root: string
+  root: Uri
 }
 export interface ExtensionOptions {
   includeRoot?: boolean
@@ -57,4 +74,30 @@ interface FolderOptions {
   prefix: PrefixOptions
   regex: RegexOptions
   custom?: string[]
+}
+declare const defaultOptions: {
+  cwd: string
+  type: WorkspaceProviderType | undefined
+  includeRoot: boolean
+}
+export declare type WorkspaceOptions = typeof defaultOptions
+export declare class Workspace {
+  root: string
+  type: WorkspaceProviderType
+  packages: Map<string, PackageJsonWithRoot>
+  roots: Map<string, string>
+  order: string[]
+  private constructor()
+  getPackageManager(): string | undefined
+  static detectWorkspaceProviders(
+    cwd?: string
+  ): Promise<WorkspaceProviderType[]>
+  static getWorkspace(
+    _options?: Partial<WorkspaceOptions>
+  ): Promise<Workspace | undefined>
+  getPackageForRoot(root: string): string | undefined
+  getDeps(pkgName: string): string[]
+  _getDepTree(pkgName: string, seen?: string[]): string[]
+  getDepTree(pkgName: string): string[]
+  getPackages(filter?: string): PackageJsonWithRoot[]
 }

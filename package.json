@@ -32,6 +32,7 @@
     "onCommand:mono-workspace.updateAll"
   ],
   "main": "./out/extension.js",
+  "browser": "./out/extension-web.js",
   "icon": "images/icon.png",
   "contributes": {
     "commands": [
@@ -54,6 +55,10 @@
       {
         "command": "mono-workspace.updateAll",
         "title": "Monorepo: Sync Workspace Folders"
+      },
+      {
+        "command": "mono-workspace.resolve",
+        "title": "Monorepo (DEBUG UTILS): Resolve"
       }
     ],
     "configuration": {
@@ -140,7 +145,8 @@
   "scripts": {
     "vscode:prepublish": "pnpm run compile",
     "compile": "node build.mjs",
-    "compile:dev": "node build.mjs",
+    "compile:dev": "node build.mjs -dev",
+    "compile:dev-web": "node build_web.mjs -dev",
     "lint": "eslint src --ext ts",
     "pretest": "pnpm run compile && pnpm run lint",
     "test": "node ./out/test/run-test.js",
@@ -150,11 +156,14 @@
     "release:pre": "vsce package --pre-release && vsce publish --pre-release"
   },
   "devDependencies": {
+    "@esbuild-plugins/node-globals-polyfill": "^0.1.1",
+    "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
     "@types/glob": "7.1.3",
     "@types/lodash": "^4.14.186",
     "@types/mocha": "8.2.1",
     "@types/node": "16.4.10",
     "@types/vscode": "1.72.0",
+    "@types/yamljs": "^0.2.31",
     "@typescript-eslint/eslint-plugin": "5.40.1",
     "@typescript-eslint/parser": "5.40.1",
     "@vscode/test-electron": "2.1.5",
@@ -173,16 +182,17 @@
     "husky": "5.1.1",
     "mocha": "10.0.0",
     "prettier": "2.2.1",
+    "type-fest": "^3.1.0",
     "typescript": "4.8.4",
     "vsce": "^2.11.0"
   },
   "dependencies": {
-    "nx": "14.8.4",
-    "@nrwl/devkit": "14.8.4",
-    "jsonc": "^2.0.0",
+    "compare-versions": "^5.0.1",
+    "globrex": "^0.1.2",
+    "json5": "^2.2.1",
     "lodash": "^4.17.21",
     "toml": "^3.0.0",
     "tslib": "2.1.0",
-    "ultra-runner": "3.10.5"
+    "yamljs": "^0.3.0"
   }
 }
