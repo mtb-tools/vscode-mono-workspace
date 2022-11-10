@@ -2,7 +2,7 @@
   "name": "vscode-mono-workspace",
   "displayName": "Mono Workspace",
   "description": "Manage monorepos with multi-root workspaces. Supports Cargo, NX, Lerna, Yarn, Pnpm, Rushjs and recursive package directories",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "publisher": "melMass",
   "repository": "https://github.com/mtb-tools/vscode-mono-workspace",
   "license": "MIT",
