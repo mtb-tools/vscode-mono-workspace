@@ -41,6 +41,10 @@
         "title": "Monorepo: Open Package (Current Window)"
       },
       {
+        "command": "mono-workspace.save_set",
+        "title": "Monorepo: Save Current Set"
+      },
+      {
         "command": "mono-workspace.openPackageNewWindow",
         "title": "Monorepo: Open Package (New Window)"
       },
@@ -64,6 +68,11 @@
           "type": "boolean",
           "default": true,
           "description": "Inlcude the top-level monorepo root path as a workspace folder"
+        },
+        "monoWorkspace.sets": {
+          "type": "array",
+          "default": [],
+          "description": "Predefined sets of workspaces. Usually defined in the monorepo root vscode setting file"
         },
         "monoWorkspace.providers_suffix": {
           "type": "boolean",
