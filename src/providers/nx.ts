@@ -5,7 +5,7 @@ import { findUp, readFile } from "../utils"
 import { Uri, workspace as vscodeWorkspace } from "vscode"
 import json from "json5"
 
-export async function parseNX(
+export async function parseNxWorkspace(
   nx: string
 ): Promise<{ name: string; root: Uri }[]> {
   const nx_file = path.join(nx, "nx.json")
@@ -14,9 +14,6 @@ export async function parseNX(
 
   const nx_content = json.parse(await readFile(nx_file))
   log_hint(`Parsed ${nx_file}`)
-
-  const appDirs = nx_content.workspaceLayout?.appsDir || "apps"
-  const libDirs = nx_content.workspaceLayout?.libsDir || "libs"
 
   const ws_content = JSON.parse(await readFile(ws_file))
   const projects = ws_content.projects
@@ -27,14 +24,54 @@ export async function parseNX(
   })
 }
 
-export async function getNxProjects(
+async function getNxProjects(filesPaths: string[]) {
+  const projects = filesPaths.map((f) => ({
+    name: path.basename(path.dirname(f)),
+    root: Uri.file(
+      path.join(
+        vscodeWorkspace.workspaceFolders![0].uri.path,
+        f.replace("/project.json", "").split("/").slice(-2).join("/")
+      )
+    ),
+  }))
+
+  log_hint(`Found ${projects.length} projects.`)
+
+  return projects
+}
+
+export async function getNxAppsAndLibs(
   options: GetProjectOptions
 ): Promise<{ root: Uri; projects: MonoworkspaceMember[] } | undefined> {
-  const nx_root = await findUp("workspace.json", options.cwd?.fsPath)
-  if (!nx_root) return
+  const [nxWorkspace] = await vscodeWorkspace.findFiles("./workspace.json")
+  const nxProjects = await vscodeWorkspace.findFiles(
+    "**/project.json",
+    "**/node_modules/**"
+  )
+
+  if (nxWorkspace) {
+    const nx_ws = await parseNxWorkspace(nxWorkspace.fsPath)
+    return {
+      projects: nx_ws,
+      root: Uri.file(nxWorkspace.fsPath),
+    }
+  }
+
+  // handle new Nx format with project.json
+  if (nxProjects.length > 0) {
+    log_hint(`Found ${nxProjects.length} project.json files`)
+    const projects = await getNxProjects(nxProjects.map((f) => f.fsPath))
+
+    return {
+      projects,
+      root: Uri.file(vscodeWorkspace.workspaceFolders![0].uri.path),
+    }
+  }
+
+  return undefined
+  // if (!nxWorkspace) return
   // const nx_tree = new FsTree(nx_root, false)
 
-  const nx_ws: { name: string; root: Uri }[] = await parseNX(nx_root)
   // log_hint(`Found NX Projects: ${JSON.stringify(projs)}`)
 
   // const nx_proj: Map<string, ProjectConfiguration> = getProjects(nx_tree)
@@ -49,9 +86,4 @@ export async function getNxProjects(
   // }
 
   // log_hint(`${JSON.stringify(nx_ws)}`)
-
-  return {
-    projects: nx_ws,
-    root: Uri.file(nx_root),
-  }
 }
