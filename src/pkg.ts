@@ -8,7 +8,7 @@ import { get as loGet, uniqBy } from "lodash"
 import { WorkspaceFolderItem } from "./types"
 import { getCargoProjects } from "./providers/cargo"
 import { Uri, workspace as vscodeWorkspace } from "vscode"
-import { getNxProjects } from "./providers/nx"
+import { getNxAppsAndLibs } from "./providers/nx"
 import { getMultiProjects } from "./providers/core"
 import { log_hint } from "./extension"
 // import { performance } from "perf_hooks"
@@ -66,7 +66,7 @@ export async function getPackageFolders(
     log_hint(`Getting NX Projects if any.`)
     const nx_provider = getSetting<boolean>("providers.nx")
     if (nx_provider) {
-      const nx = await getNxProjects(options)
+      const nx = await getNxAppsAndLibs(options)
       if (nx) {
         ret.push(
           ...(await Promise.all(
